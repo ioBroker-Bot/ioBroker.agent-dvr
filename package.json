@@ -13,7 +13,15 @@
     "ioBroker",
     "Agentdvr",
     "ispy",
-    "ptz"
+    "ptz",
+    "camera",
+    "kamera",
+    "dvr",
+    "nvr",
+    "surveillance",
+    "video",
+    "recording",
+    "cctv"
   ],
   "repository": {
     "type": "git",

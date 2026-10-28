@@ -96,17 +96,17 @@
       }
     },
     "titleLang": {
-      "en": "Agent DVR",
-      "de": "Agent DVR",
-      "ru": "Агент DVR",
-      "pt": "Agente DVR",
-      "nl": "Agent DVR",
-      "fr": "Agent DVR",
-      "it": "DVR dell'agente",
-      "es": "DVR del agente",
-      "pl": "Agent DVR",
-      "uk": "Агентський відеореєстратор",
-      "zh-cn": "代理 DVR"
+      "en": "Agent DVR – Cameras & Recordings",
+      "de": "Agent DVR – Kameras & Aufnahmen",
+      "ru": "Agent DVR – камеры и записи",
+      "pt": "Agent DVR – câmeras e gravações",
+      "nl": "Agent DVR – camera's & opnames",
+      "fr": "Agent DVR – caméras et enregistrements",
+      "it": "Agent DVR – telecamere e registrazioni",
+      "es": "Agent DVR – cámaras y grabaciones",
+      "pl": "Agent DVR – kamery i nagrania",
+      "uk": "Agent DVR – камери та записи",
+      "zh-cn": "Agent DVR – 摄像头与录像"
     },
     "desc": {
       "en": "Connects ioBroker to AgentDVR: auto-discovers cameras, mirrors all device values as data points, delivers real-time triggers on new recordings, and generates a responsive HTML gallery with optional search and tag filtering.",
@@ -127,7 +127,15 @@
     "keywords": [
       "Agentdvr",
       "ispy",
-      "ptz"
+      "ptz",
+      "camera",
+      "kamera",
+      "dvr",
+      "nvr",
+      "surveillance",
+      "video",
+      "recording",
+      "cctv"
     ],
     "licenseInformation": {
       "type": "free",
