@@ -90,6 +90,20 @@ const FeaturesPanel: React.FC<Props> = ({ native, onChange }) => (
 					onChange={v => onChange('enableEventDps', v)}
 				/>
 			</Grid>
+			<Grid
+				item
+				xs={12}
+				sm={6}
+				md={4}
+			>
+				<FormField
+					type="checkbox"
+					labelKey="cfgEnableAlertPhotos"
+					helpKey="cfgEnableAlertPhotos_tt"
+					value={native.enableAlertPhotos ?? true}
+					onChange={v => onChange('enableAlertPhotos', v)}
+				/>
+			</Grid>
 		</Grid>
 		<SectionHeader textKey="hdrDisplay" />
 		<Grid

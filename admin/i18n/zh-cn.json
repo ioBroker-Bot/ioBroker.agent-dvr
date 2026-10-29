@@ -39,6 +39,8 @@
   "cfgDashViewRec": "录像",
   "cfgEnableEventDps": "事件数据点",
   "cfgEnableEventDps_tt": "镜像最近一次录像的元数据（文件名、日期、时长、标签）",
+  "cfgEnableAlertPhotos": "保存报警照片",
+  "cfgEnableAlertPhotos_tt": "当以 ?oid={ID} 调用 Webhook 时，将当前全分辨率照片保存到 ioBroker 文件存储中（每个摄像头保留最近 3 张：grab1–grab3，时间戳 ts1–ts3）",
   "cfgEnableOverview": "总览小部件（所有摄像头）",
   "cfgEnableOverview_tt": "所有摄像头的 HTML 瓦片网格状态（用于可视化、仪表盘等）",
   "cfgEnablePtz": "PTZ 控制按钮",

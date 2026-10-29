@@ -15,6 +15,7 @@ declare global {
             enableUrls: boolean;
             enableSnapshotB64: boolean;
             enableEventDps: boolean;
+            enableAlertPhotos: boolean;
             enableOverview: boolean;
             storeRawJson: boolean;
             // Widget

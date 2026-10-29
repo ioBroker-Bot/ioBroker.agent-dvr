@@ -39,6 +39,8 @@
   "cfgDashViewRec": "Recordings",
   "cfgEnableEventDps": "Event data points",
   "cfgEnableEventDps_tt": "Mirror metadata of the last recording (filename, date, duration, tags)",
+  "cfgEnableAlertPhotos": "Save alert photos",
+  "cfgEnableAlertPhotos_tt": "On a webhook call with ?oid={ID}, store the current full-resolution photo in the ioBroker file storage (last 3 per camera: grab1–grab3, timestamps ts1–ts3)",
   "cfgEnableOverview": "Overview widget (all cameras)",
   "cfgEnableOverview_tt": "HTML state with all cameras as tile grid (for visualizations, dashboards etc.)",
   "cfgEnablePtz": "PTZ control buttons",

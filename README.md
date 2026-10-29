@@ -413,11 +413,22 @@ Append the camera ID so the adapter knows which camera fired:
 GET http://<iobroker>:<webport>/agent-dvr.0/webhook?oid={ID}&ot={OT}
 ```
 
-`{ID}` and `{OT}` are AgentDVR tags and are filled in by AgentDVR. The adapter then pulses `<cam>.events.webhook` **immediately** — before any data is fetched — and polls afterwards. Use the action on *motion detected* and trigger your script on `<cam>.events.webhook` (changed to `true`) to grab `urls.photo` at the moment of the alert. AgentDVR often calls the action several times per motion; further calls for the same camera within 20 s only refresh the data and do not pulse again.
+`{ID}` and `{OT}` are AgentDVR tags and are filled in by AgentDVR. The adapter then pulses `<cam>.events.webhook` **immediately** — before any data is fetched — and polls afterwards. Use the action on *motion detected*. With alert photos enabled the photo is stored right away — see [Getting images for VIS and scripts](#getting-images-for-vis-and-scripts) for the right trigger. AgentDVR often calls the action several times per motion; further calls for the same camera within 20 s only refresh the data and do not pulse again.
 
 Without `oid` the webhook only triggers a full poll. Query parameters are written to the web instance log at debug level.
 
 Use plain `http` for the web instance the action calls — AgentDVR silently rejects self-signed certificates.
+
+### Alert photos
+
+With **Save alert photos** enabled (default), every webhook call with `?oid={ID}` also stores the current full-resolution photo (`photo.jpg`) in the ioBroker file storage. The last 3 photos per camera are kept:
+
+| Data point | Content |
+|---|---|
+| `<cam>.alertPhotos.grab1` … `grab3` | Absolute file path of the photo (`grab1` = newest) |
+| `<cam>.alertPhotos.ts1` … `ts3` | Time of the photo |
+
+Files: `<namespace>/<cam>/grab1.jpg` … `grab3.jpg` (e.g. `agent-dvr.0/cam_8_Reolink/grab1.jpg`). On each new photo they rotate (grab1 → grab2 → grab3). `ts1` is written **last**, after the file is complete — trigger on `ts1` and send the value of `grab1` with Telegram, no HTTP request needed. The file path is only valid when the file storage is on the local disk (default).
 
 ### Overview *(requires "Overview widget")*
 
@@ -425,11 +436,63 @@ Use plain `http` for the web instance the action calls — AgentDVR silently rej
 |-----------|------|-----|-------------|
 | `widget_live_overview` | string | R | HTML tile grid of all cameras — snapshot refreshes on each adapter poll |
 
+## Getting images for VIS and scripts
+
+### Which image from where
+
+| Image | Data point / URL | Size | Time |
+|---|---|---|---|
+| Live image, small | `<cam>.urls.snapshot` (`grab.jpg`) | preview | now |
+| Live image, full | `<cam>.urls.photo` (`photo.jpg`) | full resolution, ~1 s to load | now |
+| Live stream | `<cam>.urls.mjpeg`, `<cam>.urls.mp4` | video | live |
+| Last recording – thumbnail | `<cam>.events.last.thumb` | max. 320×180 (AgentDVR limit) | best moment of the recording, shows the detected object |
+| Last recording – video | `<cam>.events.last.video` | video | after the recording |
+| Alert photos | `<cam>.alertPhotos.grab1` … `grab3` | full resolution | moment of the alert (webhook with `oid`) |
+
+The `urls.*` and `events.last.*` URLs point directly to AgentDVR. They work in the local network only — Telegram's servers cannot fetch them. Either load them with an HTTP request first (response type `arraybuffer`) or use the alert photos, which are already stored in ioBroker.
+
+### Which trigger for what
+
+| Trigger | Fires | Use for |
+|---|---|---|
+| `<cam>.alertPhotos.ts1` | photo stored, ~1–2 s after the alert | **send the alert photo** (recommended) |
+| `<cam>.events.webhook` | immediately on the webhook call | fetching an image yourself |
+| `<cam>.events.new` | new recording listed | thumbnail of the recording |
+| `<cam>.events.detected_<tag>` | AI tag of a new recording, e.g. `detected_people` — also when AgentDVR adds the tag later | notify on persons only |
+
+Use **"greater than previous"** (Blockly) or `change: 'gt'` as condition. The adapter rewrites its states on every poll, so "was updated" fires every poll. `status.alerted` is usually too short to be seen by a poll and is not a reliable trigger.
+
+### Telegram
+
+Blockly: trigger on `<cam>.alertPhotos.ts1` with "greater than previous", Telegram block with *value of* `<cam>.alertPhotos.grab1` as text. A text that is a local `.jpg` path is sent as photo.
+
+JavaScript:
+
+```js
+on({ id: 'agent-dvr.0.cam_8_Reolink.alertPhotos.ts1', change: 'gt' }, () => {
+    sendTo('telegram.0', { text: getState('agent-dvr.0.cam_8_Reolink.alertPhotos.grab1').val });
+});
+```
+
+Reading the file itself in a script: `readFile('agent-dvr.0', 'cam_8_Reolink/grab1.jpg', (err, data) => { … })`.
+
+### VIS / dashboards
+
+The alert photos are served by the web instance:
+
+```
+http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
+```
+
+e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also `grab2.jpg`, `grab3.jpg`). Use it in an image widget and refresh it on changes of `alertPhotos.ts1`. For a live image use `urls.snapshot` or `urls.photo` with a refresh interval.
+
 ## Changelog
 ### **WORK IN PROGRESS**
 * (ipod86) chore: clearer adapter title ("Agent DVR – Cameras & Recordings") and keywords
 * (ipod86) fix: `events.detected_*` now also fires when AgentDVR adds the AI tag (e.g. `people`) to a recording after it was first listed
 * (ipod86) feat: webhook with `?oid={ID}&ot={OT}` pulses `<cam>.events.webhook` immediately (20 s cooldown per camera) for the fastest possible alert photo
+* (ipod86) feat: alert photos — on a webhook call with `oid` the full-resolution photo is stored in the file storage, last 3 per camera (`alertPhotos.grab1–3`, `ts1–3`)
+* (ipod86) feat: alert photos served for VIS at `/agent-dvr.0/photos/<cam>/grab1.jpg`; new README section on getting images for VIS and scripts
 
 <!-- markdownlint-disable-next-line MD024 -->
 ### 0.5.5 (2026-10-08)

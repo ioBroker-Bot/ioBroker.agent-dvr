@@ -408,17 +408,78 @@ Kamera-ID anhängen, damit der Adapter weiß, welche Kamera ausgelöst hat:
 GET http://<iobroker>:<webport>/agent-dvr.0/webhook?oid={ID}&ot={OT}
 ```
 
-`{ID}` und `{OT}` sind AgentDVR-Tags und werden von AgentDVR ersetzt. Der Adapter setzt dann **sofort** `<cam>.events.webhook` kurz auf `true` — noch bevor Daten abgeholt werden — und fragt danach alles ab. Die Action auf *Bewegung erkannt* legen und das Skript auf `<cam>.events.webhook` (geändert auf `true`) triggern, um `urls.photo` im Moment des Alarms zu holen. AgentDVR ruft die Action oft mehrfach pro Bewegung auf; weitere Aufrufe derselben Kamera innerhalb von 20 s aktualisieren nur die Daten und lösen nicht erneut aus.
+`{ID}` und `{OT}` sind AgentDVR-Tags und werden von AgentDVR ersetzt. Der Adapter setzt dann **sofort** `<cam>.events.webhook` kurz auf `true` — noch bevor Daten abgeholt werden — und fragt danach alles ab. Die Action auf *Bewegung erkannt* legen. Mit aktivierten Alarmfotos wird das Foto sofort gespeichert — den passenden Trigger zeigt [Bilder für VIS und Skripte](#bilder-für-vis-und-skripte). AgentDVR ruft die Action oft mehrfach pro Bewegung auf; weitere Aufrufe derselben Kamera innerhalb von 20 s aktualisieren nur die Daten und lösen nicht erneut aus.
 
 Ohne `oid` löst der Webhook nur einen vollständigen Poll aus. URL-Parameter landen auf Debug-Ebene im Log der Web-Instanz.
 
 Für die Web-Instanz, die die Action aufruft, `http` verwenden — selbst signierte Zertifikate lehnt AgentDVR ohne Meldung ab.
+
+### Alarmfotos
+
+Mit **Alarmfotos speichern** (Standard: an) legt jeder Webhook-Aufruf mit `?oid={ID}` zusätzlich das aktuelle Foto in voller Auflösung (`photo.jpg`) im ioBroker-Dateispeicher ab. Pro Kamera bleiben die letzten 3 Fotos erhalten:
+
+| Datenpunkt | Inhalt |
+|---|---|
+| `<cam>.alertPhotos.grab1` … `grab3` | Absoluter Dateipfad des Fotos (`grab1` = neuestes) |
+| `<cam>.alertPhotos.ts1` … `ts3` | Zeitpunkt des Fotos |
+
+Dateien: `<namespace>/<cam>/grab1.jpg` … `grab3.jpg` (z. B. `agent-dvr.0/cam_8_Reolink/grab1.jpg`). Bei jedem neuen Foto rotieren sie (grab1 → grab2 → grab3). `ts1` wird **zuletzt** geschrieben, wenn die Datei fertig ist — auf `ts1` triggern und den Wert von `grab1` per Telegram senden, ohne HTTP-Abfrage. Der Dateipfad gilt nur, wenn der Dateispeicher auf der lokalen Platte liegt (Standard).
 
 ### Übersicht *(erfordert „Übersichts-Widget")*
 
 | Datenpunkt | Typ | R/W | Beschreibung |
 |-----------|-----|-----|-------------|
 | `widget_live_overview` | string | R | HTML-Kachelraster aller Kameras — Standbilder werden bei jedem Adapter-Poll aktualisiert |
+
+## Bilder für VIS und Skripte
+
+### Welches Bild woher
+
+| Bild | Datenpunkt / URL | Größe | Zeitpunkt |
+|---|---|---|---|
+| Livebild klein | `<cam>.urls.snapshot` (`grab.jpg`) | Vorschau | jetzt |
+| Livebild groß | `<cam>.urls.photo` (`photo.jpg`) | volle Auflösung, ca. 1 s Ladezeit | jetzt |
+| Livestream | `<cam>.urls.mjpeg`, `<cam>.urls.mp4` | Video | live |
+| Letzte Aufnahme – Vorschaubild | `<cam>.events.last.thumb` | max. 320×180 (Grenze von AgentDVR) | bester Moment der Aufnahme, zeigt das erkannte Objekt |
+| Letzte Aufnahme – Video | `<cam>.events.last.video` | Video | nach der Aufnahme |
+| Alarmfotos | `<cam>.alertPhotos.grab1` … `grab3` | volle Auflösung | Moment des Alarms (Webhook mit `oid`) |
+
+Die URLs aus `urls.*` und `events.last.*` zeigen direkt auf AgentDVR. Sie funktionieren nur im lokalen Netz — die Telegram-Server kommen nicht daran. Entweder vorher per HTTP-Anfrage laden (Antworttyp `arraybuffer`) oder die Alarmfotos nehmen, die schon in ioBroker liegen.
+
+### Welcher Trigger wofür
+
+| Trigger | Löst aus | Wofür |
+|---|---|---|
+| `<cam>.alertPhotos.ts1` | Foto gespeichert, ca. 1–2 s nach dem Alarm | **Alarmfoto senden** (empfohlen) |
+| `<cam>.events.webhook` | sofort beim Webhook-Aufruf | Bild selbst holen |
+| `<cam>.events.new` | neue Aufnahme gelistet | Vorschaubild der Aufnahme |
+| `<cam>.events.detected_<tag>` | KI-Tag einer neuen Aufnahme, z. B. `detected_people` — auch wenn AgentDVR den Tag erst später ergänzt | nur bei Personen benachrichtigen |
+
+Als Bedingung **„größer als letzter“** (Blockly) bzw. `change: 'gt'` verwenden. Der Adapter schreibt seine Datenpunkte bei jedem Poll neu, „wurde aktualisiert“ löst deshalb bei jedem Poll aus. `status.alerted` ist meist zu kurz, um von einem Poll gesehen zu werden, und taugt nicht als Trigger.
+
+### Telegram
+
+Blockly: Trigger auf `<cam>.alertPhotos.ts1` mit „größer als letzter“, Telegram-Baustein mit *Wert von* `<cam>.alertPhotos.grab1` als Text. Ein Text, der ein lokaler `.jpg`-Pfad ist, wird als Foto gesendet.
+
+JavaScript:
+
+```js
+on({ id: 'agent-dvr.0.cam_8_Reolink.alertPhotos.ts1', change: 'gt' }, () => {
+    sendTo('telegram.0', { text: getState('agent-dvr.0.cam_8_Reolink.alertPhotos.grab1').val });
+});
+```
+
+Die Datei selbst im Skript lesen: `readFile('agent-dvr.0', 'cam_8_Reolink/grab1.jpg', (err, data) => { … })`.
+
+### VIS / Dashboards
+
+Die Alarmfotos liefert die Web-Instanz aus:
+
+```
+http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
+```
+
+z. B. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (ebenso `grab2.jpg`, `grab3.jpg`). In einem Bild-Widget verwenden und bei Änderung von `alertPhotos.ts1` neu laden. Für ein Livebild `urls.snapshot` oder `urls.photo` mit Aktualisierungsintervall nehmen.
 
 ## Changelog
 
@@ -429,6 +490,8 @@ Für die Web-Instanz, die die Action aufruft, `http` verwenden — selbst signie
 ### **WORK IN PROGRESS**
 * (ipod86) fix: `events.detected_*` wird jetzt auch gesetzt, wenn AgentDVR den KI-Tag (z. B. `people`) erst nachträglich zur Aufnahme hinzufügt
 * (ipod86) feat: Webhook mit `?oid={ID}&ot={OT}` setzt sofort `<cam>.events.webhook` (20 s Sperrzeit pro Kamera) für das schnellstmögliche Alarmfoto
+* (ipod86) feat: Alarmfotos — bei Webhook-Aufruf mit `oid` wird das Foto in voller Auflösung im Dateispeicher abgelegt, letzte 3 pro Kamera (`alertPhotos.grab1–3`, `ts1–3`)
+* (ipod86) feat: Alarmfotos für VIS unter `/agent-dvr.0/photos/<cam>/grab1.jpg`; neuer README-Abschnitt, wie man an Bilder für VIS und Skripte kommt
 
 <!-- markdownlint-disable-next-line MD024 -->
 ### 0.5.5 (2026-10-08)

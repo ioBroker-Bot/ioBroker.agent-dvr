@@ -24,6 +24,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var utils = __toESM(require("@iobroker/adapter-core"));
 var http = __toESM(require("node:http"));
 var https = __toESM(require("node:https"));
+var path = __toESM(require("node:path"));
 var import_widget_i18n = require("./lib/widget-i18n");
 const CAM_COMMANDS = [
   { id: "record", path: "/command/record", params: ["oid", "ot"], name: "Start recording" },
@@ -493,7 +494,7 @@ class AgentDvr extends utils.Adapter {
   getRelId(fullId) {
     return fullId.startsWith(`${this.namespace}.`) ? fullId.slice(this.namespace.length + 1) : fullId;
   }
-  apiGet(path) {
+  apiGet(path2) {
     return new Promise((resolve) => {
       var _a;
       const rawTimeout = (_a = this.config.httpTimeoutMs) != null ? _a : 8e3;
@@ -504,7 +505,7 @@ class AgentDvr extends utils.Adapter {
       const opts = {
         hostname: this.config.serverIp,
         port: this.config.port || 8090,
-        path,
+        path: path2,
         method: "GET",
         timeout
       };
@@ -537,7 +538,7 @@ class AgentDvr extends utils.Adapter {
       }
     });
   }
-  apiGetBuffer(path) {
+  apiGetBuffer(path2) {
     return new Promise((resolve) => {
       var _a;
       const rawTimeout = (_a = this.config.httpTimeoutMs) != null ? _a : 8e3;
@@ -548,7 +549,7 @@ class AgentDvr extends utils.Adapter {
       const opts = {
         hostname: this.config.serverIp,
         port: this.config.port || 8090,
-        path,
+        path: path2,
         method: "GET",
         timeout
       };
@@ -828,6 +829,11 @@ class AgentDvr extends utils.Adapter {
         await this.ensureFlag(`${fid}.events.webhook`, "Webhook alert (AgentDVR action)");
         await this.pulse(`${fid}.events.webhook`);
         this.log.debug(`Webhook alert cam ${oid} \u2192 ${fid}.events.webhook`);
+        if (this.config.enableAlertPhotos !== false && dev.ot === 2) {
+          this.saveAlertPhoto(dev.oid, fid).catch(
+            (e) => this.log.warn(`Alert photo cam ${oid}: ${e.message}`)
+          );
+        }
       } else {
         this.log.debug(`Webhook alert cam ${oid} ignored (cooldown)`);
       }
@@ -839,6 +845,72 @@ class AgentDvr extends utils.Adapter {
     } else {
       await this.poll().catch((e) => this.log.warn(`Webhook refresh error: ${e.message}`));
     }
+  }
+  // Keeps the last 3 alert photos per camera in the file storage (<namespace>/<fid>/grab1..3.jpg,
+  // grab1 = newest). ts1 is written last, so it is a safe trigger: the file is complete by then.
+  async saveAlertPhoto(oid, fid) {
+    var _a, _b;
+    const img = await this.apiGetBuffer(`/photo.jpg?oid=${oid}`);
+    if (!img.ok || !img.data) {
+      this.log.warn(`Alert photo cam ${oid} not fetched: ${(_a = img.error) != null ? _a : "empty response"}`);
+      return;
+    }
+    const ch = `${fid}.alertPhotos`;
+    if (!this.ensuredFolders.has(this.namespace)) {
+      await this.setForeignObjectNotExistsAsync(this.namespace, {
+        type: "meta",
+        common: { name: "Alert photos", type: "meta.user" },
+        native: {}
+      });
+      this.ensuredFolders.add(this.namespace);
+    }
+    if (!this.ensuredFolders.has(ch)) {
+      await this.ensureFolder(ch, "Alert photos", "channel");
+      for (let i = 1; i <= 3; i++) {
+        await this.setObjectNotExistsAsync(`${ch}.grab${i}`, {
+          type: "state",
+          common: {
+            name: `Alert photo ${i} (file path)`,
+            type: "string",
+            role: "text",
+            read: true,
+            write: false
+          },
+          native: {}
+        });
+        await this.setObjectNotExistsAsync(`${ch}.ts${i}`, {
+          type: "state",
+          common: {
+            name: `Alert photo ${i} (time)`,
+            type: "number",
+            role: "value.time",
+            read: true,
+            write: false
+          },
+          native: {}
+        });
+      }
+      this.ensuredFolders.add(ch);
+    }
+    for (let i = 2; i >= 1; i--) {
+      try {
+        const prev = await this.readFileAsync(this.namespace, `${fid}/grab${i}.jpg`);
+        await this.writeFileAsync(this.namespace, `${fid}/grab${i + 1}.jpg`, prev.file);
+        const ts = await this.getStateAsync(`${ch}.ts${i}`);
+        await this.setStateAsync(`${ch}.ts${i + 1}`, { val: (_b = ts == null ? void 0 : ts.val) != null ? _b : null, ack: true });
+        await this.setStateAsync(`${ch}.grab${i + 1}`, { val: this.alertPhotoPath(fid, i + 1), ack: true });
+      } catch {
+      }
+    }
+    await this.writeFileAsync(this.namespace, `${fid}/grab1.jpg`, img.data);
+    await this.setStateAsync(`${ch}.grab1`, { val: this.alertPhotoPath(fid, 1), ack: true });
+    await this.setStateAsync(`${ch}.ts1`, { val: Date.now(), ack: true });
+    this.log.debug(`Alert photo cam ${oid} saved (${img.data.length} bytes)`);
+  }
+  // Absolute path of a stored alert photo, for consumers that need a local file (e.g. telegram).
+  // Only valid when the file storage lives on this host's disk (default jsonl/file DB).
+  alertPhotoPath(fid, n) {
+    return path.join(utils.getAbsoluteDefaultDataDir(), "files", this.namespace, fid, `grab${n}.jpg`);
   }
   // ---- device folder name ----
   deviceFolder(d) {

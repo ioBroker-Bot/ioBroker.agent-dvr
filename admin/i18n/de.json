@@ -39,6 +39,8 @@
   "cfgDashViewRec": "Aufnahmen",
   "cfgEnableEventDps": "Ereignis-Datenpunkte",
   "cfgEnableEventDps_tt": "Metadaten der letzten Aufnahme spiegeln (Dateiname, Datum, Dauer, Tags)",
+  "cfgEnableAlertPhotos": "Alarmfotos speichern",
+  "cfgEnableAlertPhotos_tt": "Bei einem Webhook-Aufruf mit ?oid={ID} das aktuelle Foto in voller Auflösung im ioBroker-Dateispeicher ablegen (letzte 3 pro Kamera: grab1–grab3, Zeitstempel ts1–ts3)",
   "cfgEnableOverview": "Übersichts-Widget (alle Kameras)",
   "cfgEnableOverview_tt": "HTML-State mit allen Kameras als Kachelraster (für Visualisierungen, Dashboards etc.)",
   "cfgEnablePtz": "PTZ-Steuerungs-Schaltflächen",

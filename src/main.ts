@@ -1,6 +1,7 @@
 import * as utils from '@iobroker/adapter-core';
 import * as http from 'node:http';
 import * as https from 'node:https';
+import * as path from 'node:path';
 import { getWidgetLabels, type WidgetLabels } from './lib/widget-i18n';
 
 // =====================================================================
@@ -1006,6 +1007,11 @@ class AgentDvr extends utils.Adapter {
 				await this.ensureFlag(`${fid}.events.webhook`, 'Webhook alert (AgentDVR action)');
 				await this.pulse(`${fid}.events.webhook`);
 				this.log.debug(`Webhook alert cam ${oid} → ${fid}.events.webhook`);
+				if (this.config.enableAlertPhotos !== false && dev.ot === 2) {
+					this.saveAlertPhoto(dev.oid, fid).catch(e =>
+						this.log.warn(`Alert photo cam ${oid}: ${(e as Error).message}`),
+					);
+				}
 			} else {
 				this.log.debug(`Webhook alert cam ${oid} ignored (cooldown)`);
 			}
@@ -1018,6 +1024,77 @@ class AgentDvr extends utils.Adapter {
 		} else {
 			await this.poll().catch(e => this.log.warn(`Webhook refresh error: ${(e as Error).message}`));
 		}
+	}
+
+	// Keeps the last 3 alert photos per camera in the file storage (<namespace>/<fid>/grab1..3.jpg,
+	// grab1 = newest). ts1 is written last, so it is a safe trigger: the file is complete by then.
+	private async saveAlertPhoto(oid: number | string, fid: string): Promise<void> {
+		const img = await this.apiGetBuffer(`/photo.jpg?oid=${oid}`);
+		if (!img.ok || !img.data) {
+			this.log.warn(`Alert photo cam ${oid} not fetched: ${img.error ?? 'empty response'}`);
+			return;
+		}
+		const ch = `${fid}.alertPhotos`;
+		if (!this.ensuredFolders.has(this.namespace)) {
+			// meta object required for the file storage — instanceObjects only cover new installs
+			await this.setForeignObjectNotExistsAsync(this.namespace, {
+				type: 'meta',
+				common: { name: 'Alert photos', type: 'meta.user' },
+				native: {},
+			});
+			this.ensuredFolders.add(this.namespace);
+		}
+		if (!this.ensuredFolders.has(ch)) {
+			await this.ensureFolder(ch, 'Alert photos', 'channel');
+			for (let i = 1; i <= 3; i++) {
+				await this.setObjectNotExistsAsync(`${ch}.grab${i}`, {
+					type: 'state',
+					common: {
+						name: `Alert photo ${i} (file path)`,
+						type: 'string',
+						role: 'text',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
+				await this.setObjectNotExistsAsync(`${ch}.ts${i}`, {
+					type: 'state',
+					common: {
+						name: `Alert photo ${i} (time)`,
+						type: 'number',
+						role: 'value.time',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
+			}
+			this.ensuredFolders.add(ch);
+		}
+
+		// rotate grab2 → grab3, grab1 → grab2
+		for (let i = 2; i >= 1; i--) {
+			try {
+				const prev = await this.readFileAsync(this.namespace, `${fid}/grab${i}.jpg`);
+				await this.writeFileAsync(this.namespace, `${fid}/grab${i + 1}.jpg`, prev.file);
+				const ts = await this.getStateAsync(`${ch}.ts${i}`);
+				await this.setStateAsync(`${ch}.ts${i + 1}`, { val: ts?.val ?? null, ack: true });
+				await this.setStateAsync(`${ch}.grab${i + 1}`, { val: this.alertPhotoPath(fid, i + 1), ack: true });
+			} catch {
+				// no older photo yet
+			}
+		}
+		await this.writeFileAsync(this.namespace, `${fid}/grab1.jpg`, img.data);
+		await this.setStateAsync(`${ch}.grab1`, { val: this.alertPhotoPath(fid, 1), ack: true });
+		await this.setStateAsync(`${ch}.ts1`, { val: Date.now(), ack: true });
+		this.log.debug(`Alert photo cam ${oid} saved (${img.data.length} bytes)`);
+	}
+
+	// Absolute path of a stored alert photo, for consumers that need a local file (e.g. telegram).
+	// Only valid when the file storage lives on this host's disk (default jsonl/file DB).
+	private alertPhotoPath(fid: string, n: number): string {
+		return path.join(utils.getAbsoluteDefaultDataDir(), 'files', this.namespace, fid, `grab${n}.jpg`);
 	}
 
 	// ---- device folder name ----

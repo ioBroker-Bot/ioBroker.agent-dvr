@@ -193,6 +193,7 @@
     "enableUrls": true,
     "enableSnapshotB64": false,
     "enableEventDps": true,
+    "enableAlertPhotos": true,
     "enableOverview": true,
     "storeRawJson": false,
     "enableWidget": true,
@@ -248,6 +249,27 @@
   },
   "objects": [],
   "instanceObjects": [
+    {
+      "_id": "",
+      "type": "meta",
+      "common": {
+        "name": {
+          "en": "Alert photos",
+          "de": "Alarmfotos",
+          "ru": "Фото тревоги",
+          "pt": "Fotos de alarme",
+          "nl": "Alarmfoto's",
+          "fr": "Photos d'alerte",
+          "it": "Foto di allarme",
+          "es": "Fotos de alarma",
+          "pl": "Zdjęcia alarmowe",
+          "uk": "Фото тривоги",
+          "zh-cn": "报警照片"
+        },
+        "type": "meta.user"
+      },
+      "native": {}
+    },
     {
       "_id": "info",
       "type": "channel",
