@@ -194,6 +194,7 @@
     "enableSnapshotB64": false,
     "enableEventDps": true,
     "enableAlertPhotos": true,
+    "photoWebInstance": "",
     "enableOverview": true,
     "storeRawJson": false,
     "enableWidget": true,

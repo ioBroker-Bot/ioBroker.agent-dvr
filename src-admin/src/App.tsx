@@ -76,6 +76,7 @@ class App extends GenericApp<GenericAppProps, AppState> {
 								<FeaturesPanel
 									native={native}
 									onChange={handleChange}
+									socket={(this as any).socket}
 								/>
 							)}
 							{tab === 2 && (

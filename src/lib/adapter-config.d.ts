@@ -16,6 +16,7 @@ declare global {
             enableSnapshotB64: boolean;
             enableEventDps: boolean;
             enableAlertPhotos: boolean;
+            photoWebInstance: string;
             enableOverview: boolean;
             storeRawJson: boolean;
             // Widget

@@ -480,7 +480,7 @@ Die Datei selbst im Skript lesen: `readFile('agent-dvr.0', 'cam_8_Reolink/grab1.
 
 ### VIS / Dashboards
 
-Die Alarmfotos liefert die Web-Instanz aus — der fertige Link steht in `<cam>.alertPhotos.url1` … `url3`. Der Adapter nimmt eine aktive Web-Instanz (bevorzugt `http`, weil TV-Apps selbst signierte Zertifikate oft ablehnen) und die IPv4-Adresse des Hosts. Die Links bleiben bei jedem neuen Foto gleich und können einmal in einer App eingetragen werden:
+Die Alarmfotos liefert die Web-Instanz aus — der fertige Link steht in `<cam>.alertPhotos.url1` … `url3`. Der Adapter nimmt eine aktive Web-Instanz (bevorzugt `http`, weil TV-Apps selbst signierte Zertifikate oft ablehnen) und die IPv4-Adresse des Hosts. Die Web-Instanz lässt sich in den Einstellungen auch fest wählen (*Funktionen → Web-Instanz für Foto-Links*). Ändert sich eine Web-Instanz (Port, https, Bind-Adresse, aktiviert) oder die Host-Adresse, werden die Links automatisch neu geschrieben. Die Links bleiben bei jedem neuen Foto gleich und können einmal in einer App eingetragen werden:
 
 ```
 http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
@@ -495,7 +495,7 @@ z. B. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (ebe
 	### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
-* (ipod86) feat: `alertPhotos.url1–3` mit festem http(s)-Link zu jedem Foto, für TV-/Kiosk-Apps, die nur Web-Links annehmen
+* (ipod86) feat: `alertPhotos.url1–3` mit festem http(s)-Link zu jedem Foto, für TV-/Kiosk-Apps, die nur Web-Links annehmen; Web-Instanz wählbar, Links folgen Änderungen an den Web-Instanzen
 * (ipod86) feat: `<cam>.events.webhookParams` mit allen Parametern des letzten Webhook-Aufrufs als JSON
 
 <!-- markdownlint-disable-next-line MD024 -->

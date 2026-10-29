@@ -332,6 +332,7 @@ class AgentDvr extends utils.Adapter {
   // last webhook alert pulse per camera — AgentDVR often calls the action twice per motion
   webhookLast = {};
   webBaseUrl = void 0;
+  webBaseTimer = void 0;
   camAspect = {};
   devById = /* @__PURE__ */ new Map();
   eventBusy = {};
@@ -341,6 +342,7 @@ class AgentDvr extends utils.Adapter {
     this.on("stateChange", this.onStateChange.bind(this));
     this.on("message", this.onMessage.bind(this));
     this.on("unload", this.onUnload.bind(this));
+    this.on("objectChange", this.onObjectChange.bind(this));
   }
   // ---- lifecycle ----
   async ensureWebInstance() {
@@ -372,6 +374,9 @@ class AgentDvr extends utils.Adapter {
     }
     this.schedulePoll(pollSeconds * 1e3);
     this.subscribeStates("*");
+    this.subscribeForeignObjects("system.adapter.web.*");
+    this.subscribeForeignObjects("system.host.*");
+    this.refreshPhotoUrls().catch((e) => this.log.warn(`Photo URL refresh: ${e.message}`));
     this.log.info(`Agent DVR adapter ready. Polling ${this.baseUrl} every ${pollSeconds}s.`);
   }
   onUnload(callback) {
@@ -951,6 +956,39 @@ class AgentDvr extends utils.Adapter {
     await this.setStateAsync(`${ch}.ts1`, { val: Date.now(), ack: true });
     this.log.debug(`Alert photo cam ${oid} saved (${img.data.length} bytes)`);
   }
+  onObjectChange(id) {
+    if (!/^system\.adapter\.web\.\d+$/.test(id) && !id.startsWith("system.host.")) {
+      return;
+    }
+    if (this.webBaseTimer !== void 0) {
+      this.clearTimeout(this.webBaseTimer);
+    }
+    this.webBaseTimer = this.setTimeout(() => {
+      this.webBaseTimer = void 0;
+      this.refreshPhotoUrls().catch((e) => this.log.warn(`Photo URL refresh: ${e.message}`));
+    }, 2e3);
+  }
+  // Recomputes the web base URL and rewrites url1..3 of every camera that already has alert photos.
+  async refreshPhotoUrls() {
+    const base = await this.findWebBaseUrl();
+    if (base === this.webBaseUrl) {
+      return;
+    }
+    this.log.info(`Alert photo links now use ${base || "(no web instance)"}`);
+    this.webBaseUrl = base;
+    for (const dev of this.devById.values()) {
+      const fid = this.deviceFolder(dev);
+      if (!await this.getObjectAsync(`${fid}.alertPhotos.url1`)) {
+        continue;
+      }
+      for (let n = 1; n <= 3; n++) {
+        await this.setStateAsync(`${fid}.alertPhotos.url${n}`, {
+          val: await this.alertPhotoUrl(fid, n),
+          ack: true
+        });
+      }
+    }
+  }
   // http(s) URL of a stored alert photo via the web extension, for apps that only accept web links
   async alertPhotoUrl(fid, n) {
     if (this.webBaseUrl === void 0) {
@@ -968,11 +1006,12 @@ class AgentDvr extends utils.Adapter {
         endkey: "system.adapter.web.\u9999"
       });
       const own = await this.getForeignObjectAsync(`system.adapter.${this.namespace}`);
-      const wanted = String((_b = (_a = own == null ? void 0 : own.native) == null ? void 0 : _a.webInstance) != null ? _b : "*");
+      const loadedBy = String((_b = (_a = own == null ? void 0 : own.native) == null ? void 0 : _a.webInstance) != null ? _b : "*");
+      const chosen = this.config.photoWebInstance || "";
       const webs = view.rows.map((r) => r.value).filter((o) => {
         var _a2;
-        return ((_a2 = o == null ? void 0 : o.common) == null ? void 0 : _a2.enabled) && (wanted === "*" || o._id === `system.adapter.${wanted}`);
-      }).sort((a, b) => {
+        return ((_a2 = o == null ? void 0 : o.common) == null ? void 0 : _a2.enabled) && (loadedBy === "*" || o._id === `system.adapter.${loadedBy}`);
+      }).filter((o) => !chosen || o._id === `system.adapter.${chosen}`).sort((a, b) => {
         var _a2, _b2;
         return Number(!!((_a2 = a.native) == null ? void 0 : _a2.secure)) - Number(!!((_b2 = b.native) == null ? void 0 : _b2.secure));
       });

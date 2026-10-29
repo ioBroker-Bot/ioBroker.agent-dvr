@@ -485,7 +485,7 @@ Reading the file itself in a script: `readFile('agent-dvr.0', 'cam_8_Reolink/gra
 
 ### VIS / dashboards
 
-The alert photos are served by the web instance — the ready-made link is in `<cam>.alertPhotos.url1` … `url3`. The adapter picks an enabled web instance (plain `http` preferred, since TV apps often reject self-signed certificates) and the host's IPv4 address. The links stay the same for every new photo, so you can enter them once in an app:
+The alert photos are served by the web instance — the ready-made link is in `<cam>.alertPhotos.url1` … `url3`. The adapter picks an enabled web instance (plain `http` preferred, since TV apps often reject self-signed certificates) and the host's IPv4 address. The web instance can also be chosen in the settings (*Features → Web instance for photo links*). When a web instance changes (port, https, bind address, enabled) or the host address changes, the links are rewritten automatically. The links stay the same for every new photo, so you can enter them once in an app:
 
 ```
 http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
@@ -495,7 +495,7 @@ e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also
 
 ## Changelog
 ### **WORK IN PROGRESS**
-* (ipod86) feat: `alertPhotos.url1–3` with a fixed http(s) link to each photo, for TV/kiosk apps that only accept web links
+* (ipod86) feat: `alertPhotos.url1–3` with a fixed http(s) link to each photo, for TV/kiosk apps that only accept web links; web instance selectable, links follow changes of the web instances
 * (ipod86) feat: `<cam>.events.webhookParams` with all parameters of the latest webhook call as JSON
 
 <!-- markdownlint-disable-next-line MD024 -->
