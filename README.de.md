@@ -493,7 +493,7 @@ z. B. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (ebe
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.6.0 (2026-10-29)
 * (ipod86) fix: `events.detected_*` wird jetzt auch gesetzt, wenn AgentDVR den KI-Tag (z. B. `people`) erst nachträglich zur Aufnahme hinzufügt
 * (ipod86) feat: Webhook mit `?oid={ID}&ot={OT}` setzt sofort `<cam>.events.webhook` (20 s Sperrzeit pro Kamera) für das schnellstmögliche Alarmfoto
 * (ipod86) feat: Alarmfotos — bei Webhook-Aufruf mit `oid` wird das Foto in voller Auflösung im Dateispeicher abgelegt, letzte 3 pro Kamera (`alertPhotos.grab1–3`, `ts1–3`)

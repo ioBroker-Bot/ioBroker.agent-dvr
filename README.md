@@ -493,7 +493,7 @@ http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
 e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also `grab2.jpg`, `grab3.jpg`). Use it in an image widget and refresh it on changes of `alertPhotos.ts1`. For a live image use `urls.snapshot` or `urls.photo` with a refresh interval.
 
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.6.0 (2026-10-29)
 * (ipod86) chore: clearer adapter title ("Agent DVR – Cameras & Recordings") and keywords
 * (ipod86) fix: `events.detected_*` now also fires when AgentDVR adds the AI tag (e.g. `people`) to a recording after it was first listed
 * (ipod86) feat: webhook with `?oid={ID}&ot={OT}` pulses `<cam>.events.webhook` immediately (20 s cooldown per camera) for the fastest possible alert photo
@@ -523,10 +523,6 @@ e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also
 
 ### 0.5.2 (2026-08-05)
 * (ipod86) feat: rename `overview` DP to `widget_live_overview` for consistent naming
-
-### 0.5.1 (2026-08-05)
-* (ipod86) feat: per-instance URL routing — each adapter instance uses its own URL namespace (`agent-dvr.0/`, `agent-dvr.1/`, …)
-* (ipod86) feat: rename per-camera recording widget DP from `widget` to `widget_recordings`; add new `widget_live` DP with a single-camera live tile
 
 [Older changelog entries in CHANGELOG_OLD.md](CHANGELOG_OLD.md)
 
