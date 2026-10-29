@@ -986,16 +986,16 @@ class AgentDvr extends utils.Adapter {
 	// Pulses <cam>.events.webhook right away — before the poll — so scripts can grab a photo
 	// at the moment of the alert, then refreshes all data.
 	private async onWebhook(val: ioBroker.StateValue): Promise<void> {
-		let q: Record<string, unknown> = {};
+		let q: Record<string, string | undefined> = {};
 		try {
-			q = JSON.parse(String(val ?? '{}')) as Record<string, unknown>;
+			q = JSON.parse(String(val ?? '{}')) as Record<string, string | undefined>;
 		} catch {
 			// keep empty
 		}
 		await this.setStateAsync('system.webhook', { val: String(val ?? ''), ack: true });
 
-		const oid = String(q.oid ?? '');
-		const ot = String(q.ot ?? '2');
+		const oid = `${q.oid ?? ''}`;
+		const ot = `${q.ot ?? '2'}`;
 		const dev = [...this.devById.values()].find(d => String(d.oid) === oid && String(d.ot) === ot);
 		if (dev) {
 			const fid = this.deviceFolder(dev);

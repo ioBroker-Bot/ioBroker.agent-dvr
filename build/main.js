@@ -816,8 +816,8 @@ class AgentDvr extends utils.Adapter {
     } catch {
     }
     await this.setStateAsync("system.webhook", { val: String(val != null ? val : ""), ack: true });
-    const oid = String((_a = q.oid) != null ? _a : "");
-    const ot = String((_b = q.ot) != null ? _b : "2");
+    const oid = `${(_a = q.oid) != null ? _a : ""}`;
+    const ot = `${(_b = q.ot) != null ? _b : "2"}`;
     const dev = [...this.devById.values()].find((d) => String(d.oid) === oid && String(d.ot) === ot);
     if (dev) {
       const fid = this.deviceFolder(dev);
