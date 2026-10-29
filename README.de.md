@@ -400,7 +400,19 @@ Diese URL als **Action** in AgentDVR eintragen (Kamera → Bearbeiten → Alarme
 
 Gibt `{"ok":true}` bei Erfolg zurück.
 
-URL-Parameter sind optional. Sind welche angehängt, landen sie im Log der Web-Instanz — praktisch, um zu sehen, was AgentDVR-Tags wie `?oid={ID}&ai={AI}` tatsächlich enthalten.
+### Schneller Alarm pro Kamera
+
+Kamera-ID anhängen, damit der Adapter weiß, welche Kamera ausgelöst hat:
+
+```
+GET http://<iobroker>:<webport>/agent-dvr.0/webhook?oid={ID}&ot={OT}
+```
+
+`{ID}` und `{OT}` sind AgentDVR-Tags und werden von AgentDVR ersetzt. Der Adapter setzt dann **sofort** `<cam>.events.webhook` kurz auf `true` — noch bevor Daten abgeholt werden — und fragt danach alles ab. Die Action auf *Bewegung erkannt* legen und das Skript auf `<cam>.events.webhook` (geändert auf `true`) triggern, um `urls.photo` im Moment des Alarms zu holen. AgentDVR ruft die Action oft mehrfach pro Bewegung auf; weitere Aufrufe derselben Kamera innerhalb von 20 s aktualisieren nur die Daten und lösen nicht erneut aus.
+
+Ohne `oid` löst der Webhook nur einen vollständigen Poll aus. URL-Parameter landen auf Debug-Ebene im Log der Web-Instanz.
+
+Für die Web-Instanz, die die Action aufruft, `http` verwenden — selbst signierte Zertifikate lehnt AgentDVR ohne Meldung ab.
 
 ### Übersicht *(erfordert „Übersichts-Widget")*
 
@@ -416,7 +428,7 @@ URL-Parameter sind optional. Sind welche angehängt, landen sie im Log der Web-I
 -->
 ### **WORK IN PROGRESS**
 * (ipod86) fix: `events.detected_*` wird jetzt auch gesetzt, wenn AgentDVR den KI-Tag (z. B. `people`) erst nachträglich zur Aufnahme hinzufügt
-* (ipod86) feat: Webhook schreibt mitgeschickte URL-Parameter ins Log (z. B. AgentDVR-Tags wie `{ID}`, `{AI}`)
+* (ipod86) feat: Webhook mit `?oid={ID}&ot={OT}` setzt sofort `<cam>.events.webhook` (20 s Sperrzeit pro Kamera) für das schnellstmögliche Alarmfoto
 
 <!-- markdownlint-disable-next-line MD024 -->
 ### 0.5.5 (2026-10-08)

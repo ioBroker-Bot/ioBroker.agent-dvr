@@ -328,6 +328,8 @@ class AgentDvr extends utils.Adapter {
   // tags per recent recording — AgentDVR often adds the AI tag (e.g. "people")
   // only after the recording was first listed, so late tags must still pulse
   eventTagsSeen = {};
+  // last webhook alert pulse per camera — AgentDVR often calls the action twice per motion
+  webhookLast = {};
   camAspect = {};
   devById = /* @__PURE__ */ new Map();
   eventBusy = {};
@@ -476,6 +478,10 @@ class AgentDvr extends utils.Adapter {
       return;
     }
     const relId = this.getRelId(id);
+    if (relId === "system.webhook") {
+      this.onWebhook(state.val).catch((e) => this.log.warn(`Webhook error: ${e.message}`));
+      return;
+    }
     const entry = this.registry.get(relId);
     if (entry) {
       this.runCommand(relId, entry, state.val).catch(
@@ -737,6 +743,20 @@ class AgentDvr extends utils.Adapter {
     await this.writeLeaf("system.lastUpdate", "");
     await this.writeLeaf("system.lastPoll", 0);
     await this.writeLeaf("system.cameraCount", 0);
+    if (!this.ensuredFolders.has("system.webhook")) {
+      await this.setObjectNotExistsAsync("system.webhook", {
+        type: "state",
+        common: {
+          name: "Last webhook call (JSON)",
+          type: "string",
+          role: "json",
+          read: true,
+          write: true
+        },
+        native: {}
+      });
+      this.ensuredFolders.add("system.webhook");
+    }
     if (this.config.enableSystemControls) {
       await this.ensureFolder("system.control", "Control", "channel");
       for (const c of SYS_COMMANDS) {
@@ -782,6 +802,42 @@ class AgentDvr extends utils.Adapter {
     this.camAspect[d.oid] = wh ? `${wh[0]}/${wh[1]}` : "";
     if (wh) {
       this.log.debug(`cam ${d.oid} resolution ${wh[0]}x${wh[1]} -> AR ${this.camAspect[d.oid]}`);
+    }
+  }
+  // ---- webhook ----
+  // Written by the web extension (lib/web.js) when AgentDVR calls the webhook with ?oid={ID}.
+  // Pulses <cam>.events.webhook right away — before the poll — so scripts can grab a photo
+  // at the moment of the alert, then refreshes all data.
+  async onWebhook(val) {
+    var _a, _b, _c;
+    let q = {};
+    try {
+      q = JSON.parse(String(val != null ? val : "{}"));
+    } catch {
+    }
+    await this.setStateAsync("system.webhook", { val: String(val != null ? val : ""), ack: true });
+    const oid = String((_a = q.oid) != null ? _a : "");
+    const ot = String((_b = q.ot) != null ? _b : "2");
+    const dev = [...this.devById.values()].find((d) => String(d.oid) === oid && String(d.ot) === ot);
+    if (dev) {
+      const fid = this.deviceFolder(dev);
+      const key = `${ot}_${oid}`;
+      const cooldownMs = 2e4;
+      if (Date.now() - ((_c = this.webhookLast[key]) != null ? _c : 0) >= cooldownMs) {
+        this.webhookLast[key] = Date.now();
+        await this.ensureFlag(`${fid}.events.webhook`, "Webhook alert (AgentDVR action)");
+        await this.pulse(`${fid}.events.webhook`);
+        this.log.debug(`Webhook alert cam ${oid} \u2192 ${fid}.events.webhook`);
+      } else {
+        this.log.debug(`Webhook alert cam ${oid} ignored (cooldown)`);
+      }
+    } else if (oid) {
+      this.log.debug(`Webhook: no device with oid ${oid} / ot ${ot}`);
+    }
+    if (this.pollBusy) {
+      this.scheduleRefresh();
+    } else {
+      await this.poll().catch((e) => this.log.warn(`Webhook refresh error: ${e.message}`));
     }
   }
   // ---- device folder name ----
