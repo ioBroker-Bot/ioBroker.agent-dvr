@@ -426,6 +426,7 @@ With **Save alert photos** enabled (default), every webhook call with `?oid={ID}
 | Data point | Content |
 |---|---|
 | `<cam>.alertPhotos.grab1` … `grab3` | Absolute file path of the photo (`grab1` = newest) |
+| `<cam>.alertPhotos.url1` … `url3` | http(s) URL via the web instance, e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` — for TV, kiosk or other apps that only accept web links |
 | `<cam>.alertPhotos.uri1` … `uri3` | ioBroker file URI, e.g. `iobfile://agent-dvr.0/cam_8_Reolink/grab1.jpg` |
 | `<cam>.alertPhotos.ts1` … `ts3` | Time of the photo |
 
@@ -484,7 +485,7 @@ Reading the file itself in a script: `readFile('agent-dvr.0', 'cam_8_Reolink/gra
 
 ### VIS / dashboards
 
-The alert photos are served by the web instance:
+The alert photos are served by the web instance — the ready-made link is in `<cam>.alertPhotos.url1` … `url3`. The adapter picks an enabled web instance (plain `http` preferred, since TV apps often reject self-signed certificates) and the host's IPv4 address. The links stay the same for every new photo, so you can enter them once in an app:
 
 ```
 http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
@@ -494,6 +495,7 @@ e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also
 
 ## Changelog
 ### **WORK IN PROGRESS**
+* (ipod86) feat: `alertPhotos.url1–3` with a fixed http(s) link to each photo, for TV/kiosk apps that only accept web links
 * (ipod86) feat: `<cam>.events.webhookParams` with all parameters of the latest webhook call as JSON
 
 <!-- markdownlint-disable-next-line MD024 -->

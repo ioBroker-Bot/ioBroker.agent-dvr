@@ -421,6 +421,7 @@ Mit **Alarmfotos speichern** (Standard: an) legt jeder Webhook-Aufruf mit `?oid=
 | Datenpunkt | Inhalt |
 |---|---|
 | `<cam>.alertPhotos.grab1` … `grab3` | Absoluter Dateipfad des Fotos (`grab1` = neuestes) |
+| `<cam>.alertPhotos.url1` … `url3` | http(s)-Link über die Web-Instanz, z. B. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` — für TV-, Kiosk- oder andere Apps, die nur Web-Links annehmen |
 | `<cam>.alertPhotos.uri1` … `uri3` | ioBroker-Datei-URI, z. B. `iobfile://agent-dvr.0/cam_8_Reolink/grab1.jpg` |
 | `<cam>.alertPhotos.ts1` … `ts3` | Zeitpunkt des Fotos |
 
@@ -479,7 +480,7 @@ Die Datei selbst im Skript lesen: `readFile('agent-dvr.0', 'cam_8_Reolink/grab1.
 
 ### VIS / Dashboards
 
-Die Alarmfotos liefert die Web-Instanz aus:
+Die Alarmfotos liefert die Web-Instanz aus — der fertige Link steht in `<cam>.alertPhotos.url1` … `url3`. Der Adapter nimmt eine aktive Web-Instanz (bevorzugt `http`, weil TV-Apps selbst signierte Zertifikate oft ablehnen) und die IPv4-Adresse des Hosts. Die Links bleiben bei jedem neuen Foto gleich und können einmal in einer App eingetragen werden:
 
 ```
 http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
@@ -494,6 +495,7 @@ z. B. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (ebe
 	### **WORK IN PROGRESS**
 -->
 ### **WORK IN PROGRESS**
+* (ipod86) feat: `alertPhotos.url1–3` mit festem http(s)-Link zu jedem Foto, für TV-/Kiosk-Apps, die nur Web-Links annehmen
 * (ipod86) feat: `<cam>.events.webhookParams` mit allen Parametern des letzten Webhook-Aufrufs als JSON
 
 <!-- markdownlint-disable-next-line MD024 -->

@@ -459,6 +459,7 @@ class AgentDvr extends utils.Adapter {
 	private readonly eventTagsSeen: Record<string | number, Map<string, Set<string>>> = {};
 	// last webhook alert pulse per camera — AgentDVR often calls the action twice per motion
 	private readonly webhookLast: Record<string, number> = {};
+	private webBaseUrl: string | undefined = undefined;
 	private readonly camAspect: Record<string | number, string> = {};
 	private readonly devById = new Map<string | number, Device>();
 	private readonly eventBusy: Record<string | number, boolean> = {};
@@ -1087,6 +1088,17 @@ class AgentDvr extends utils.Adapter {
 					},
 					native: {},
 				});
+				await this.setObjectNotExistsAsync(`${ch}.url${i}`, {
+					type: 'state',
+					common: {
+						name: `Alert photo ${i} (http URL)`,
+						type: 'string',
+						role: 'text.url',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
 				await this.setObjectNotExistsAsync(`${ch}.ts${i}`, {
 					type: 'state',
 					common: {
@@ -1111,6 +1123,7 @@ class AgentDvr extends utils.Adapter {
 				await this.setStateAsync(`${ch}.ts${i + 1}`, { val: ts?.val ?? null, ack: true });
 				await this.setStateAsync(`${ch}.grab${i + 1}`, { val: this.alertPhotoPath(fid, i + 1), ack: true });
 				await this.setStateAsync(`${ch}.uri${i + 1}`, { val: this.alertPhotoUri(fid, i + 1), ack: true });
+				await this.setStateAsync(`${ch}.url${i + 1}`, { val: await this.alertPhotoUrl(fid, i + 1), ack: true });
 			} catch {
 				// no older photo yet
 			}
@@ -1118,8 +1131,54 @@ class AgentDvr extends utils.Adapter {
 		await this.writeFileAsync(this.namespace, `${fid}/grab1.jpg`, img.data);
 		await this.setStateAsync(`${ch}.grab1`, { val: this.alertPhotoPath(fid, 1), ack: true });
 		await this.setStateAsync(`${ch}.uri1`, { val: this.alertPhotoUri(fid, 1), ack: true });
+		await this.setStateAsync(`${ch}.url1`, { val: await this.alertPhotoUrl(fid, 1), ack: true });
 		await this.setStateAsync(`${ch}.ts1`, { val: Date.now(), ack: true });
 		this.log.debug(`Alert photo cam ${oid} saved (${img.data.length} bytes)`);
+	}
+
+	// http(s) URL of a stored alert photo via the web extension, for apps that only accept web links
+	private async alertPhotoUrl(fid: string, n: number): Promise<string> {
+		if (this.webBaseUrl === undefined) {
+			this.webBaseUrl = await this.findWebBaseUrl();
+		}
+		return this.webBaseUrl ? `${this.webBaseUrl}/${this.namespace}/photos/${fid}/grab${n}.jpg` : '';
+	}
+
+	// Base URL of the web instance that serves this adapter's extension — prefers plain http,
+	// since TV and kiosk apps often reject self-signed certificates.
+	private async findWebBaseUrl(): Promise<string> {
+		try {
+			const view = await this.getObjectViewAsync('system', 'instance', {
+				startkey: 'system.adapter.web.',
+				endkey: 'system.adapter.web.\u9999',
+			});
+			const own = await this.getForeignObjectAsync(`system.adapter.${this.namespace}`);
+			const wanted = String(own?.native?.webInstance ?? '*');
+			const webs = view.rows
+				.map(r => r.value)
+				.filter(o => o?.common?.enabled && (wanted === '*' || o._id === `system.adapter.${wanted}`))
+				.sort((a, b) => Number(!!a.native?.secure) - Number(!!b.native?.secure));
+			const web = webs[0];
+			if (!web) {
+				return '';
+			}
+			let host = String(web.native?.bind ?? '');
+			if (!host || host === '0.0.0.0' || host === '::') {
+				const hostObj = await this.getForeignObjectAsync(`system.host.${web.common.host}`);
+				const addrs = ((hostObj?.common as { address?: string[] } | undefined)?.address ?? []).filter(
+					a => /^\d+\.\d+\.\d+\.\d+$/.test(a) && !a.startsWith('127.'),
+				);
+				host = addrs[0] ?? '';
+			}
+			if (!host) {
+				return '';
+			}
+			const proto = web.native?.secure ? 'https' : 'http';
+			return `${proto}://${host}:${web.native?.port ?? 8082}`;
+		} catch (e) {
+			this.log.debug(`Web base URL not found: ${(e as Error).message}`);
+			return '';
+		}
 	}
 
 	// ioBroker file URI of a stored alert photo — resolved by telegram >= 6 directly from the file storage

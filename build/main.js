@@ -331,6 +331,7 @@ class AgentDvr extends utils.Adapter {
   eventTagsSeen = {};
   // last webhook alert pulse per camera — AgentDVR often calls the action twice per motion
   webhookLast = {};
+  webBaseUrl = void 0;
   camAspect = {};
   devById = /* @__PURE__ */ new Map();
   eventBusy = {};
@@ -906,6 +907,17 @@ class AgentDvr extends utils.Adapter {
           },
           native: {}
         });
+        await this.setObjectNotExistsAsync(`${ch}.url${i}`, {
+          type: "state",
+          common: {
+            name: `Alert photo ${i} (http URL)`,
+            type: "string",
+            role: "text.url",
+            read: true,
+            write: false
+          },
+          native: {}
+        });
         await this.setObjectNotExistsAsync(`${ch}.ts${i}`, {
           type: "state",
           common: {
@@ -928,14 +940,63 @@ class AgentDvr extends utils.Adapter {
         await this.setStateAsync(`${ch}.ts${i + 1}`, { val: (_b = ts == null ? void 0 : ts.val) != null ? _b : null, ack: true });
         await this.setStateAsync(`${ch}.grab${i + 1}`, { val: this.alertPhotoPath(fid, i + 1), ack: true });
         await this.setStateAsync(`${ch}.uri${i + 1}`, { val: this.alertPhotoUri(fid, i + 1), ack: true });
+        await this.setStateAsync(`${ch}.url${i + 1}`, { val: await this.alertPhotoUrl(fid, i + 1), ack: true });
       } catch {
       }
     }
     await this.writeFileAsync(this.namespace, `${fid}/grab1.jpg`, img.data);
     await this.setStateAsync(`${ch}.grab1`, { val: this.alertPhotoPath(fid, 1), ack: true });
     await this.setStateAsync(`${ch}.uri1`, { val: this.alertPhotoUri(fid, 1), ack: true });
+    await this.setStateAsync(`${ch}.url1`, { val: await this.alertPhotoUrl(fid, 1), ack: true });
     await this.setStateAsync(`${ch}.ts1`, { val: Date.now(), ack: true });
     this.log.debug(`Alert photo cam ${oid} saved (${img.data.length} bytes)`);
+  }
+  // http(s) URL of a stored alert photo via the web extension, for apps that only accept web links
+  async alertPhotoUrl(fid, n) {
+    if (this.webBaseUrl === void 0) {
+      this.webBaseUrl = await this.findWebBaseUrl();
+    }
+    return this.webBaseUrl ? `${this.webBaseUrl}/${this.namespace}/photos/${fid}/grab${n}.jpg` : "";
+  }
+  // Base URL of the web instance that serves this adapter's extension — prefers plain http,
+  // since TV and kiosk apps often reject self-signed certificates.
+  async findWebBaseUrl() {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+    try {
+      const view = await this.getObjectViewAsync("system", "instance", {
+        startkey: "system.adapter.web.",
+        endkey: "system.adapter.web.\u9999"
+      });
+      const own = await this.getForeignObjectAsync(`system.adapter.${this.namespace}`);
+      const wanted = String((_b = (_a = own == null ? void 0 : own.native) == null ? void 0 : _a.webInstance) != null ? _b : "*");
+      const webs = view.rows.map((r) => r.value).filter((o) => {
+        var _a2;
+        return ((_a2 = o == null ? void 0 : o.common) == null ? void 0 : _a2.enabled) && (wanted === "*" || o._id === `system.adapter.${wanted}`);
+      }).sort((a, b) => {
+        var _a2, _b2;
+        return Number(!!((_a2 = a.native) == null ? void 0 : _a2.secure)) - Number(!!((_b2 = b.native) == null ? void 0 : _b2.secure));
+      });
+      const web = webs[0];
+      if (!web) {
+        return "";
+      }
+      let host = String((_d = (_c = web.native) == null ? void 0 : _c.bind) != null ? _d : "");
+      if (!host || host === "0.0.0.0" || host === "::") {
+        const hostObj = await this.getForeignObjectAsync(`system.host.${web.common.host}`);
+        const addrs = ((_f = (_e = hostObj == null ? void 0 : hostObj.common) == null ? void 0 : _e.address) != null ? _f : []).filter(
+          (a) => /^\d+\.\d+\.\d+\.\d+$/.test(a) && !a.startsWith("127.")
+        );
+        host = (_g = addrs[0]) != null ? _g : "";
+      }
+      if (!host) {
+        return "";
+      }
+      const proto = ((_h = web.native) == null ? void 0 : _h.secure) ? "https" : "http";
+      return `${proto}://${host}:${(_j = (_i = web.native) == null ? void 0 : _i.port) != null ? _j : 8082}`;
+    } catch (e) {
+      this.log.debug(`Web base URL not found: ${e.message}`);
+      return "";
+    }
   }
   // ioBroker file URI of a stored alert photo — resolved by telegram >= 6 directly from the file storage
   alertPhotoUri(fid, n) {
