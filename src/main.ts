@@ -1058,6 +1058,17 @@ class AgentDvr extends utils.Adapter {
 					},
 					native: {},
 				});
+				await this.setObjectNotExistsAsync(`${ch}.uri${i}`, {
+					type: 'state',
+					common: {
+						name: `Alert photo ${i} (iobfile URI)`,
+						type: 'string',
+						role: 'text',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
 				await this.setObjectNotExistsAsync(`${ch}.ts${i}`, {
 					type: 'state',
 					common: {
@@ -1081,14 +1092,21 @@ class AgentDvr extends utils.Adapter {
 				const ts = await this.getStateAsync(`${ch}.ts${i}`);
 				await this.setStateAsync(`${ch}.ts${i + 1}`, { val: ts?.val ?? null, ack: true });
 				await this.setStateAsync(`${ch}.grab${i + 1}`, { val: this.alertPhotoPath(fid, i + 1), ack: true });
+				await this.setStateAsync(`${ch}.uri${i + 1}`, { val: this.alertPhotoUri(fid, i + 1), ack: true });
 			} catch {
 				// no older photo yet
 			}
 		}
 		await this.writeFileAsync(this.namespace, `${fid}/grab1.jpg`, img.data);
 		await this.setStateAsync(`${ch}.grab1`, { val: this.alertPhotoPath(fid, 1), ack: true });
+		await this.setStateAsync(`${ch}.uri1`, { val: this.alertPhotoUri(fid, 1), ack: true });
 		await this.setStateAsync(`${ch}.ts1`, { val: Date.now(), ack: true });
 		this.log.debug(`Alert photo cam ${oid} saved (${img.data.length} bytes)`);
+	}
+
+	// ioBroker file URI of a stored alert photo — resolved by telegram >= 6 directly from the file storage
+	private alertPhotoUri(fid: string, n: number): string {
+		return `iobfile://${this.namespace}/${fid}/grab${n}.jpg`;
 	}
 
 	// Absolute path of a stored alert photo, for consumers that need a local file (e.g. telegram).

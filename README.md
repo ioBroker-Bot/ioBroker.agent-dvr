@@ -426,9 +426,10 @@ With **Save alert photos** enabled (default), every webhook call with `?oid={ID}
 | Data point | Content |
 |---|---|
 | `<cam>.alertPhotos.grab1` … `grab3` | Absolute file path of the photo (`grab1` = newest) |
+| `<cam>.alertPhotos.uri1` … `uri3` | ioBroker file URI, e.g. `iobfile://agent-dvr.0/cam_8_Reolink/grab1.jpg` |
 | `<cam>.alertPhotos.ts1` … `ts3` | Time of the photo |
 
-Files: `<namespace>/<cam>/grab1.jpg` … `grab3.jpg` (e.g. `agent-dvr.0/cam_8_Reolink/grab1.jpg`). On each new photo they rotate (grab1 → grab2 → grab3). `ts1` is written **last**, after the file is complete — trigger on `ts1` and send the value of `grab1` with Telegram, no HTTP request needed. The file path is only valid when the file storage is on the local disk (default).
+Files: `<namespace>/<cam>/grab1.jpg` … `grab3.jpg` (e.g. `agent-dvr.0/cam_8_Reolink/grab1.jpg`). On each new photo they rotate (grab1 → grab2 → grab3). `ts1` is written **last**, after the file is complete — trigger on `ts1` and send the photo with Telegram, no HTTP request needed (see [Telegram](#telegram)). The file path in `grab1`–`grab3` is only valid when the file storage is on the local disk (default); `uri1`–`uri3` work with any storage.
 
 ### Overview *(requires "Overview widget")*
 
@@ -464,13 +465,18 @@ Use **"greater than previous"** (Blockly) or `change: 'gt'` as condition. The ad
 
 ### Telegram
 
-Blockly: trigger on `<cam>.alertPhotos.ts1` with "greater than previous", Telegram block with *value of* `<cam>.alertPhotos.grab1` as text. A text that is a local `.jpg` path is sent as photo.
+Blockly: trigger on `<cam>.alertPhotos.ts1` with "greater than previous", Telegram block with *value of* `<cam>.alertPhotos.uri1` as text.
+
+- **Telegram 6 or newer:** use `uri1` (`iobfile://…`). Telegram reads the photo directly from the ioBroker file storage and sends it as photo — works with every storage type.
+- **Older Telegram versions:** use `grab1` (local file path). A text that is an existing local `.jpg` path is sent as photo.
+
+Sending the file content itself (e.g. *read file* → Telegram) does **not** work from Blockly: raw data is only sent as photo with an explicit `type: 'photo'`.
 
 JavaScript:
 
 ```js
 on({ id: 'agent-dvr.0.cam_8_Reolink.alertPhotos.ts1', change: 'gt' }, () => {
-    sendTo('telegram.0', { text: getState('agent-dvr.0.cam_8_Reolink.alertPhotos.grab1').val });
+    sendTo('telegram.0', { text: getState('agent-dvr.0.cam_8_Reolink.alertPhotos.uri1').val });
 });
 ```
 
@@ -493,6 +499,7 @@ e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also
 * (ipod86) feat: webhook with `?oid={ID}&ot={OT}` pulses `<cam>.events.webhook` immediately (20 s cooldown per camera) for the fastest possible alert photo
 * (ipod86) feat: alert photos — on a webhook call with `oid` the full-resolution photo is stored in the file storage, last 3 per camera (`alertPhotos.grab1–3`, `ts1–3`)
 * (ipod86) feat: alert photos served for VIS at `/agent-dvr.0/photos/<cam>/grab1.jpg`; new README section on getting images for VIS and scripts
+* (ipod86) feat: `alertPhotos.uri1–3` with the `iobfile://` URI of each photo, sendable directly with Telegram 6
 
 <!-- markdownlint-disable-next-line MD024 -->
 ### 0.5.5 (2026-10-08)

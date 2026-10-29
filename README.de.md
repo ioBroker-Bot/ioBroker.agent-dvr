@@ -421,9 +421,10 @@ Mit **Alarmfotos speichern** (Standard: an) legt jeder Webhook-Aufruf mit `?oid=
 | Datenpunkt | Inhalt |
 |---|---|
 | `<cam>.alertPhotos.grab1` … `grab3` | Absoluter Dateipfad des Fotos (`grab1` = neuestes) |
+| `<cam>.alertPhotos.uri1` … `uri3` | ioBroker-Datei-URI, z. B. `iobfile://agent-dvr.0/cam_8_Reolink/grab1.jpg` |
 | `<cam>.alertPhotos.ts1` … `ts3` | Zeitpunkt des Fotos |
 
-Dateien: `<namespace>/<cam>/grab1.jpg` … `grab3.jpg` (z. B. `agent-dvr.0/cam_8_Reolink/grab1.jpg`). Bei jedem neuen Foto rotieren sie (grab1 → grab2 → grab3). `ts1` wird **zuletzt** geschrieben, wenn die Datei fertig ist — auf `ts1` triggern und den Wert von `grab1` per Telegram senden, ohne HTTP-Abfrage. Der Dateipfad gilt nur, wenn der Dateispeicher auf der lokalen Platte liegt (Standard).
+Dateien: `<namespace>/<cam>/grab1.jpg` … `grab3.jpg` (z. B. `agent-dvr.0/cam_8_Reolink/grab1.jpg`). Bei jedem neuen Foto rotieren sie (grab1 → grab2 → grab3). `ts1` wird **zuletzt** geschrieben, wenn die Datei fertig ist — auf `ts1` triggern und das Foto per Telegram senden, ohne HTTP-Abfrage (siehe [Telegram](#telegram)). Der Dateipfad in `grab1`–`grab3` gilt nur, wenn der Dateispeicher auf der lokalen Platte liegt (Standard); `uri1`–`uri3` funktionieren mit jedem Speicher.
 
 ### Übersicht *(erfordert „Übersichts-Widget")*
 
@@ -459,13 +460,18 @@ Als Bedingung **„größer als letzter“** (Blockly) bzw. `change: 'gt'` verwe
 
 ### Telegram
 
-Blockly: Trigger auf `<cam>.alertPhotos.ts1` mit „größer als letzter“, Telegram-Baustein mit *Wert von* `<cam>.alertPhotos.grab1` als Text. Ein Text, der ein lokaler `.jpg`-Pfad ist, wird als Foto gesendet.
+Blockly: Trigger auf `<cam>.alertPhotos.ts1` mit „größer als letzter“, Telegram-Baustein mit *Wert von* `<cam>.alertPhotos.uri1` als Text.
+
+- **Telegram 6 oder neuer:** `uri1` (`iobfile://…`) verwenden. Telegram liest das Foto direkt aus dem ioBroker-Dateispeicher und sendet es als Foto — funktioniert mit jeder Speicherart.
+- **Ältere Telegram-Versionen:** `grab1` (lokaler Dateipfad) verwenden. Ein Text, der ein vorhandener lokaler `.jpg`-Pfad ist, wird als Foto gesendet.
+
+Den Dateiinhalt selbst zu senden (z. B. *Datei lesen* → Telegram) funktioniert in Blockly **nicht**: Rohdaten werden nur mit ausdrücklichem `type: 'photo'` als Foto gesendet.
 
 JavaScript:
 
 ```js
 on({ id: 'agent-dvr.0.cam_8_Reolink.alertPhotos.ts1', change: 'gt' }, () => {
-    sendTo('telegram.0', { text: getState('agent-dvr.0.cam_8_Reolink.alertPhotos.grab1').val });
+    sendTo('telegram.0', { text: getState('agent-dvr.0.cam_8_Reolink.alertPhotos.uri1').val });
 });
 ```
 
@@ -492,6 +498,7 @@ z. B. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (ebe
 * (ipod86) feat: Webhook mit `?oid={ID}&ot={OT}` setzt sofort `<cam>.events.webhook` (20 s Sperrzeit pro Kamera) für das schnellstmögliche Alarmfoto
 * (ipod86) feat: Alarmfotos — bei Webhook-Aufruf mit `oid` wird das Foto in voller Auflösung im Dateispeicher abgelegt, letzte 3 pro Kamera (`alertPhotos.grab1–3`, `ts1–3`)
 * (ipod86) feat: Alarmfotos für VIS unter `/agent-dvr.0/photos/<cam>/grab1.jpg`; neuer README-Abschnitt, wie man an Bilder für VIS und Skripte kommt
+* (ipod86) feat: `alertPhotos.uri1–3` mit der `iobfile://`-Adresse jedes Fotos, direkt mit Telegram 6 sendbar
 
 <!-- markdownlint-disable-next-line MD024 -->
 ### 0.5.5 (2026-10-08)
