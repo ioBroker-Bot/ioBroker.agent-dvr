@@ -413,7 +413,7 @@ Append the camera ID so the adapter knows which camera fired:
 GET http://<iobroker>:<webport>/agent-dvr.0/webhook?oid={ID}&ot={OT}
 ```
 
-`{ID}` and `{OT}` are AgentDVR tags and are filled in by AgentDVR. The adapter then pulses `<cam>.events.webhook` **immediately** — before any data is fetched — and polls afterwards. Use the action on *motion detected*. With alert photos enabled the photo is stored right away — see [Getting images for VIS and scripts](#getting-images-for-vis-and-scripts) for the right trigger. AgentDVR often calls the action several times per motion; further calls for the same camera within 20 s only refresh the data and do not pulse again.
+`{ID}` and `{OT}` are AgentDVR tags and are filled in by AgentDVR. The adapter then pulses `<cam>.events.webhook` **immediately** — before any data is fetched — and polls afterwards. Use the action on *motion detected*. With alert photos enabled the photo is stored right away — see [Getting images for VIS and scripts](#getting-images-for-vis-and-scripts) for the right trigger. AgentDVR often calls the action several times per motion; further calls for the same camera within 20 s only refresh the data and do not pulse again. `<cam>.events.webhookParams` holds all parameters of the latest call as JSON (plus `ts`), written before the pulse and also during the cooldown — add any AgentDVR tags you need to the URL (e.g. `&ai={AI}&zone={ZONE}&name={NAME}`) and evaluate them in your own script.
 
 Without `oid` the webhook only triggers a full poll. Query parameters are written to the web instance log at debug level.
 
@@ -493,6 +493,10 @@ http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
 e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also `grab2.jpg`, `grab3.jpg`). Use it in an image widget and refresh it on changes of `alertPhotos.ts1`. For a live image use `urls.snapshot` or `urls.photo` with a refresh interval.
 
 ## Changelog
+### **WORK IN PROGRESS**
+* (ipod86) feat: `<cam>.events.webhookParams` with all parameters of the latest webhook call as JSON
+
+<!-- markdownlint-disable-next-line MD024 -->
 ### 0.6.0 (2026-10-29)
 * (ipod86) chore: clearer adapter title ("Agent DVR – Cameras & Recordings") and keywords
 * (ipod86) fix: `events.detected_*` now also fires when AgentDVR adds the AI tag (e.g. `people`) to a recording after it was first listed

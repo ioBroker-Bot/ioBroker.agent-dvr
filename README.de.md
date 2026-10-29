@@ -408,7 +408,7 @@ Kamera-ID anhängen, damit der Adapter weiß, welche Kamera ausgelöst hat:
 GET http://<iobroker>:<webport>/agent-dvr.0/webhook?oid={ID}&ot={OT}
 ```
 
-`{ID}` und `{OT}` sind AgentDVR-Tags und werden von AgentDVR ersetzt. Der Adapter setzt dann **sofort** `<cam>.events.webhook` kurz auf `true` — noch bevor Daten abgeholt werden — und fragt danach alles ab. Die Action auf *Bewegung erkannt* legen. Mit aktivierten Alarmfotos wird das Foto sofort gespeichert — den passenden Trigger zeigt [Bilder für VIS und Skripte](#bilder-für-vis-und-skripte). AgentDVR ruft die Action oft mehrfach pro Bewegung auf; weitere Aufrufe derselben Kamera innerhalb von 20 s aktualisieren nur die Daten und lösen nicht erneut aus.
+`{ID}` und `{OT}` sind AgentDVR-Tags und werden von AgentDVR ersetzt. Der Adapter setzt dann **sofort** `<cam>.events.webhook` kurz auf `true` — noch bevor Daten abgeholt werden — und fragt danach alles ab. Die Action auf *Bewegung erkannt* legen. Mit aktivierten Alarmfotos wird das Foto sofort gespeichert — den passenden Trigger zeigt [Bilder für VIS und Skripte](#bilder-für-vis-und-skripte). AgentDVR ruft die Action oft mehrfach pro Bewegung auf; weitere Aufrufe derselben Kamera innerhalb von 20 s aktualisieren nur die Daten und lösen nicht erneut aus. `<cam>.events.webhookParams` enthält alle Parameter des letzten Aufrufs als JSON (plus `ts`), geschrieben vor dem Puls und auch während der Sperrzeit — beliebige AgentDVR-Tags an die URL hängen (z. B. `&ai={AI}&zone={ZONE}&name={NAME}`) und im eigenen Skript auswerten.
 
 Ohne `oid` löst der Webhook nur einen vollständigen Poll aus. URL-Parameter landen auf Debug-Ebene im Log der Web-Instanz.
 
@@ -493,6 +493,10 @@ z. B. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (ebe
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (ipod86) feat: `<cam>.events.webhookParams` mit allen Parametern des letzten Webhook-Aufrufs als JSON
+
+<!-- markdownlint-disable-next-line MD024 -->
 ### 0.6.0 (2026-10-29)
 * (ipod86) fix: `events.detected_*` wird jetzt auch gesetzt, wenn AgentDVR den KI-Tag (z. B. `people`) erst nachträglich zur Aufnahme hinzufügt
 * (ipod86) feat: Webhook mit `?oid={ID}&ot={OT}` setzt sofort `<cam>.events.webhook` (20 s Sperrzeit pro Kamera) für das schnellstmögliche Alarmfoto

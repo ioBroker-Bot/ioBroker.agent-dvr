@@ -1001,6 +1001,24 @@ class AgentDvr extends utils.Adapter {
 		if (dev) {
 			const fid = this.deviceFolder(dev);
 			const key = `${ot}_${oid}`;
+			// all parameters of the latest call (also during the cooldown), written before the pulse
+			const paramsId = `${fid}.events.webhookParams`;
+			if (!this.ensuredFolders.has(paramsId)) {
+				await this.ensurePath(paramsId);
+				await this.setObjectNotExistsAsync(paramsId, {
+					type: 'state',
+					common: {
+						name: 'Webhook parameters (JSON)',
+						type: 'string',
+						role: 'json',
+						read: true,
+						write: false,
+					},
+					native: {},
+				});
+				this.ensuredFolders.add(paramsId);
+			}
+			await this.setStateAsync(paramsId, { val: JSON.stringify(q), ack: true });
 			const cooldownMs = 20000;
 			if (Date.now() - (this.webhookLast[key] ?? 0) >= cooldownMs) {
 				this.webhookLast[key] = Date.now();

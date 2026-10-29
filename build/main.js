@@ -823,6 +823,23 @@ class AgentDvr extends utils.Adapter {
     if (dev) {
       const fid = this.deviceFolder(dev);
       const key = `${ot}_${oid}`;
+      const paramsId = `${fid}.events.webhookParams`;
+      if (!this.ensuredFolders.has(paramsId)) {
+        await this.ensurePath(paramsId);
+        await this.setObjectNotExistsAsync(paramsId, {
+          type: "state",
+          common: {
+            name: "Webhook parameters (JSON)",
+            type: "string",
+            role: "json",
+            read: true,
+            write: false
+          },
+          native: {}
+        });
+        this.ensuredFolders.add(paramsId);
+      }
+      await this.setStateAsync(paramsId, { val: JSON.stringify(q), ack: true });
       const cooldownMs = 2e4;
       if (Date.now() - ((_c = this.webhookLast[key]) != null ? _c : 0) >= cooldownMs) {
         this.webhookLast[key] = Date.now();
