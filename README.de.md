@@ -400,6 +400,8 @@ Diese URL als **Action** in AgentDVR eintragen (Kamera → Bearbeiten → Alarme
 
 Gibt `{"ok":true}` bei Erfolg zurück.
 
+URL-Parameter sind optional. Sind welche angehängt, landen sie im Log der Web-Instanz — praktisch, um zu sehen, was AgentDVR-Tags wie `?oid={ID}&ai={AI}` tatsächlich enthalten.
+
 ### Übersicht *(erfordert „Übersichts-Widget")*
 
 | Datenpunkt | Typ | R/W | Beschreibung |
@@ -412,6 +414,11 @@ Gibt `{"ok":true}` bei Erfolg zurück.
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (ipod86) fix: `events.detected_*` wird jetzt auch gesetzt, wenn AgentDVR den KI-Tag (z. B. `people`) erst nachträglich zur Aufnahme hinzufügt
+* (ipod86) feat: Webhook schreibt mitgeschickte URL-Parameter ins Log (z. B. AgentDVR-Tags wie `{ID}`, `{AI}`)
+
+<!-- markdownlint-disable-next-line MD024 -->
 ### 0.5.5 (2026-10-08)
 * (ipod86) fix: Live-Vorschau-Video wird nicht mehr gestreckt/verzerrt angezeigt — AgentDVRs Live-Stream presst das komplette Bild in ein festes Containerformat, unabhängig vom echten Seitenverhältnis der Kamera; jetzt korrigiert (`object-fit:fill`) statt verzerrt gezeigt
 * (ipod86) feat: Einstellbares Aktualisierungsintervall für die Live-Kachel (`widgetLiveRefreshSec`) — Abwägung zwischen aktuellem Vorschaubild und einem dauerhaft offenen Video-Modal, da das Neuschreiben des Widget-States das Modal zurücksetzt

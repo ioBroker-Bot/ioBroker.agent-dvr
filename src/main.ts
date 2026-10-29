@@ -453,6 +453,9 @@ class AgentDvr extends utils.Adapter {
 	private profileSig = '';
 	private lastCamNames: { key: string; name: string }[] = [];
 	private readonly lastEventFn: Record<string | number, string> = {};
+	// tags per recent recording — AgentDVR often adds the AI tag (e.g. "people")
+	// only after the recording was first listed, so late tags must still pulse
+	private readonly eventTagsSeen: Record<string | number, Map<string, Set<string>>> = {};
 	private readonly camAspect: Record<string | number, string> = {};
 	private readonly devById = new Map<string | number, Device>();
 	private readonly eventBusy: Record<string | number, boolean> = {};
@@ -1574,6 +1577,7 @@ class AgentDvr extends utils.Adapter {
 		}
 
 		let newCount = 0;
+		const firstRun = this.lastEventFn[oid] === undefined;
 		if (events.length) {
 			const prev = this.lastEventFn[oid];
 			if (prev !== undefined) {
@@ -1583,12 +1587,35 @@ class AgentDvr extends utils.Adapter {
 			this.lastEventFn[oid] = (events[0] as AgentDvrEvent).fn ?? '';
 		}
 
+		const tags = new Set<string>();
+		for (let i = 0; i < newCount && i < events.length; i++) {
+			tokensOf((events[i] as AgentDvrEvent).tg ?? '').forEach(t => tags.add(t));
+		}
+
+		// tags added to an already known recording since the last poll
+		const known = this.eventTagsSeen[oid];
+		const nextKnown = new Map<string, Set<string>>();
+		let lateTags = 0;
+		for (const ev of events.slice(0, 20) as AgentDvrEvent[]) {
+			const fn = ev.fn ?? '';
+			const cur = new Set(tokensOf(ev.tg ?? ''));
+			const before = known?.get(fn);
+			if (!firstRun && before) {
+				for (const t of cur) {
+					if (!before.has(t) && !tags.has(t)) {
+						tags.add(t);
+						lateTags++;
+					}
+				}
+			}
+			nextKnown.set(fn, cur);
+		}
+		this.eventTagsSeen[oid] = nextKnown;
+
 		if (newCount > 0) {
 			await this.pulse(`${fid}.events.new`);
-			const tags = new Set<string>();
-			for (let i = 0; i < newCount && i < events.length; i++) {
-				tokensOf((events[i] as AgentDvrEvent).tg ?? '').forEach(t => tags.add(t));
-			}
+		}
+		if (newCount > 0 || lateTags > 0) {
 			for (const t of tags) {
 				if (ignore.includes(t)) {
 					continue;
@@ -1597,7 +1624,7 @@ class AgentDvr extends utils.Adapter {
 				await this.ensureFlag(tid, `Detected: ${t}`);
 				await this.pulse(tid);
 			}
-			this.log.debug(`${newCount} new event(s) cam ${oid} [${[...tags].join(',')}]`);
+			this.log.debug(`${newCount} new event(s), ${lateTags} late tag(s) cam ${oid} [${[...tags].join(',')}]`);
 		}
 	}
 

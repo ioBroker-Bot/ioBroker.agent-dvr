@@ -405,6 +405,8 @@ Configure this URL as an **Action** in AgentDVR (Camera → Edit → Alerts → 
 
 Returns `{"ok":true}` on success.
 
+Query parameters are optional. If present, they are written to the log of the web instance — useful to see what AgentDVR tags such as `?oid={ID}&ai={AI}` actually contain.
+
 ### Overview *(requires "Overview widget")*
 
 | Data point | Type | R/W | Description |
@@ -414,6 +416,8 @@ Returns `{"ok":true}` on success.
 ## Changelog
 ### **WORK IN PROGRESS**
 * (ipod86) chore: clearer adapter title ("Agent DVR – Cameras & Recordings") and keywords
+* (ipod86) fix: `events.detected_*` now also fires when AgentDVR adds the AI tag (e.g. `people`) to a recording after it was first listed
+* (ipod86) feat: webhook logs any query parameters it receives (e.g. AgentDVR tags like `{ID}`, `{AI}`)
 
 <!-- markdownlint-disable-next-line MD024 -->
 ### 0.5.5 (2026-10-08)
