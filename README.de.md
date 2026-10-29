@@ -494,7 +494,7 @@ z. B. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (ebe
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.7.0 (2026-10-29)
 * (ipod86) feat: `alertPhotos.url1–3` mit festem http(s)-Link zu jedem Foto, für TV-/Kiosk-Apps, die nur Web-Links annehmen; Web-Instanz wählbar, Links folgen Änderungen an den Web-Instanzen
 * (ipod86) feat: `<cam>.events.webhookParams` mit allen Parametern des letzten Webhook-Aufrufs als JSON
 

@@ -494,7 +494,7 @@ http://<iobroker>:<webport>/agent-dvr.0/photos/<cam>/grab1.jpg
 e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also `grab2.jpg`, `grab3.jpg`). Use it in an image widget and refresh it on changes of `alertPhotos.ts1`. For a live image use `urls.snapshot` or `urls.photo` with a refresh interval.
 
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.7.0 (2026-10-29)
 * (ipod86) feat: `alertPhotos.url1–3` with a fixed http(s) link to each photo, for TV/kiosk apps that only accept web links; web instance selectable, links follow changes of the web instances
 * (ipod86) feat: `<cam>.events.webhookParams` with all parameters of the latest webhook call as JSON
 
@@ -526,9 +526,6 @@ e.g. `http://192.168.1.10:8082/agent-dvr.0/photos/cam_8_Reolink/grab1.jpg` (also
 
 ### 0.5.3 (2026-10-04)
 * (ipod86) fix: clear ensuredFolders cache on object deletion to prevent stale "no existing object" warnings for rediscovered drives/cameras
-
-### 0.5.2 (2026-08-05)
-* (ipod86) feat: rename `overview` DP to `widget_live_overview` for consistent naming
 
 [Older changelog entries in CHANGELOG_OLD.md](CHANGELOG_OLD.md)
 
