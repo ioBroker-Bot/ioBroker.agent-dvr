@@ -871,6 +871,59 @@ class AgentDvr extends utils.Adapter {
   }
   // Keeps the last 3 alert photos per camera in the file storage (<namespace>/<fid>/grab1..3.jpg,
   // grab1 = newest). ts1 is written last, so it is a safe trigger: the file is complete by then.
+  async ensureAlertPhotoObjects(ch) {
+    if (this.ensuredFolders.has(ch)) {
+      return;
+    }
+    await this.ensureFolder(ch, "Alert photos", "channel");
+    for (let i = 1; i <= 3; i++) {
+      await this.setObjectNotExistsAsync(`${ch}.grab${i}`, {
+        type: "state",
+        common: {
+          name: `Alert photo ${i} (file path)`,
+          type: "string",
+          role: "text",
+          read: true,
+          write: false
+        },
+        native: {}
+      });
+      await this.setObjectNotExistsAsync(`${ch}.uri${i}`, {
+        type: "state",
+        common: {
+          name: `Alert photo ${i} (iobfile URI)`,
+          type: "string",
+          role: "text",
+          read: true,
+          write: false
+        },
+        native: {}
+      });
+      await this.setObjectNotExistsAsync(`${ch}.url${i}`, {
+        type: "state",
+        common: {
+          name: `Alert photo ${i} (http URL)`,
+          type: "string",
+          role: "text.url",
+          read: true,
+          write: false
+        },
+        native: {}
+      });
+      await this.setObjectNotExistsAsync(`${ch}.ts${i}`, {
+        type: "state",
+        common: {
+          name: `Alert photo ${i} (time)`,
+          type: "number",
+          role: "value.time",
+          read: true,
+          write: false
+        },
+        native: {}
+      });
+    }
+    this.ensuredFolders.add(ch);
+  }
   async saveAlertPhoto(oid, fid) {
     var _a, _b;
     const img = await this.apiGetBuffer(`/photo.jpg?oid=${oid}`);
@@ -887,56 +940,7 @@ class AgentDvr extends utils.Adapter {
       });
       this.ensuredFolders.add(this.namespace);
     }
-    if (!this.ensuredFolders.has(ch)) {
-      await this.ensureFolder(ch, "Alert photos", "channel");
-      for (let i = 1; i <= 3; i++) {
-        await this.setObjectNotExistsAsync(`${ch}.grab${i}`, {
-          type: "state",
-          common: {
-            name: `Alert photo ${i} (file path)`,
-            type: "string",
-            role: "text",
-            read: true,
-            write: false
-          },
-          native: {}
-        });
-        await this.setObjectNotExistsAsync(`${ch}.uri${i}`, {
-          type: "state",
-          common: {
-            name: `Alert photo ${i} (iobfile URI)`,
-            type: "string",
-            role: "text",
-            read: true,
-            write: false
-          },
-          native: {}
-        });
-        await this.setObjectNotExistsAsync(`${ch}.url${i}`, {
-          type: "state",
-          common: {
-            name: `Alert photo ${i} (http URL)`,
-            type: "string",
-            role: "text.url",
-            read: true,
-            write: false
-          },
-          native: {}
-        });
-        await this.setObjectNotExistsAsync(`${ch}.ts${i}`, {
-          type: "state",
-          common: {
-            name: `Alert photo ${i} (time)`,
-            type: "number",
-            role: "value.time",
-            read: true,
-            write: false
-          },
-          native: {}
-        });
-      }
-      this.ensuredFolders.add(ch);
-    }
+    await this.ensureAlertPhotoObjects(ch);
     for (let i = 2; i >= 1; i--) {
       try {
         const prev = await this.readFileAsync(this.namespace, `${fid}/grab${i}.jpg`);
@@ -978,9 +982,10 @@ class AgentDvr extends utils.Adapter {
     this.webBaseUrl = base;
     for (const dev of this.devById.values()) {
       const fid = this.deviceFolder(dev);
-      if (!await this.getObjectAsync(`${fid}.alertPhotos.url1`)) {
+      if (!await this.getObjectAsync(`${fid}.alertPhotos`)) {
         continue;
       }
+      await this.ensureAlertPhotoObjects(`${fid}.alertPhotos`);
       for (let n = 1; n <= 3; n++) {
         await this.setStateAsync(`${fid}.alertPhotos.url${n}`, {
           val: await this.alertPhotoUrl(fid, n),
